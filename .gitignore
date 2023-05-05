@@ -1,0 +1,8 @@
+venv
+LOGs/
+DATA/
+*.exe
+*.csv
+*.jpeg
+*.log
+image_comparison.py

@@ -3,8 +3,10 @@
     "output_file_name": "closest_profiles.csv",
     "debug": true,
     "save_json": false,
+    "max_worker_count": 4,
+    "requests_timeout": 10,
     "rapid_api": {
-        "key": "ADD_YOUR_API_KEY",
+        "key": "Your_API_KEY",
         "host": "tiktok-video-no-watermark2.p.rapidapi.com",
         "search_profiles_url": "https://tiktok-video-no-watermark2.p.rapidapi.com/user/search",
         "user_info_url": "https://tiktok-video-no-watermark2.p.rapidapi.com/user/info"

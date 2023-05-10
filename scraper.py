@@ -144,16 +144,18 @@ def get_user_detail(user_data: dict) -> dict:
         dict: formatted user details
     """
 
-    if not ("user" in user_data and user_data["user"]):
+    if not ("user" in user_data and user_data["user"] and "stats" in user_data and user_data["stats"]):
         return None
     
     user_data = user_data["user"]
+    user_stats = user_data["stats"]
 
     return {
         "avatar": ('avatarMedium' in user_data and user_data['avatarMedium']) or ('avatarThumb' in user_data and user_data['avatarThumb']) or "",
         "username": "uniqueId" in user_data and user_data['uniqueId'] or "",
         "fullname": "nickname" in user_data and user_data["nickname"] or "",
-        "bio": "signature" in user_data and user_data["signature"] or ""
+        "bio": "signature" in user_data and user_data["signature"] or "",
+        "follower_count": "followerCount" in user_stats and user_stats["followerCount"] or 0
     }
 
 
@@ -455,7 +457,7 @@ def main():
     for i, username in enumerate(CONFIG['account'], start=1):
         debug(message=f"User: {username}", type="info", separator=f"\n[{i}] ")
         try:
-            # get user info
+            # ## get user info
             user_profile = make_request(CONFIG['rapid_api']['user_info_url'], {"unique_id":f"@{username}"})
             # user_profile = read_json('user_info.json')
             if not user_profile:
@@ -467,7 +469,7 @@ def main():
                 debug(message=f"Could not get user detail for {username}", type="error", separator="\n  [xx] ")
                 continue
 
-            # get user's avatar
+            # ## get user's avatar
             user = get_profile_avatar(user)
 
             # get profiles with matching name
@@ -534,14 +536,14 @@ if __name__ == '__main__':
         intro()
 
         # # when we are executing script
-        # BASE_FOLDER = os.path.dirname(__file__)
+        BASE_FOLDER = os.path.dirname(__file__)
 
-        # when we are executing executable
-        while True:
-            BASE_FOLDER = input("Please enter path to the project folder: ")
-            if os.path.exists(BASE_FOLDER) and os.path.exists(os.path.join(BASE_FOLDER, "scraper.exe")):
-                break
-            BASE_FOLDER = input("Not a valid path. Please enter path to the project folder: ")
+        # # when we are executing executable
+        # while True:
+        #     BASE_FOLDER = input("Please enter path to the project folder: ")
+        #     if os.path.exists(BASE_FOLDER) and os.path.exists(os.path.join(BASE_FOLDER, "scraper.exe")):
+        #         break
+        #     BASE_FOLDER = input("Not a valid path. Please enter path to the project folder: ")
 
         #  getting name of output file
         while True:

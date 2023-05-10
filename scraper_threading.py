@@ -149,8 +149,8 @@ def read_input(file_name: str) -> list:
         if os.path.exists(file):
             with open(file, 'r') as r:
                 profiles = [ profile.split("/@")[-1] for profile in r.read().split("\n") ]
-        else:
-            debug(message=f" File not found: {file}", type="error", separator="\n [xx] ")
+        # else:
+            # debug(message=f" File not found: {file}", type="error", separator="\n [xx] ")
     except Exception as e:
         debug(message=f"Exception while reading file: {file} || {e}", type="exception", separator="\n    [xx] ")
     
@@ -168,9 +168,10 @@ def get_user_detail(user_data: dict) -> dict:
         dict: formatted user details
     """
 
-    if not ("user" in user_data and user_data["user"]):
+    if not ("user" in user_data and user_data["user"] and "stats" in user_data and user_data["stats"]):
         return None
     
+    user_stats = user_data["stats"]
     user_data = user_data["user"]
 
     return {
@@ -178,7 +179,8 @@ def get_user_detail(user_data: dict) -> dict:
         "avatar_url": ('avatarMedium' in user_data and user_data['avatarMedium']) or ('avatarThumb' in user_data and user_data['avatarThumb']) or "",
         "avatar_file": f'{"uniqueId" in user_data and user_data["uniqueId"] or ""}.jpeg',
         "fullname": "nickname" in user_data and user_data["nickname"] or "",
-        "bio": "signature" in user_data and user_data["signature"] or ""
+        "bio": "signature" in user_data and user_data["signature"] or "",
+        "follower_count": "followerCount" in user_stats and user_stats["followerCount"] or 0
     }
 
 
@@ -224,6 +226,7 @@ def get_profile_avatar(avatar_url: str, avatar_file: str) -> None:
 
     try:
         if avatar_url:
+            print(f"  [>>] Downloading Avatar for {avatar_file.replace('.jpeg', '')}")
             avatar_file = os.path.join(AVATAR_FOLDER, f"{avatar_file}")
 
             # Download the image and save it to the local folder
@@ -231,7 +234,7 @@ def get_profile_avatar(avatar_url: str, avatar_file: str) -> None:
             with open(avatar_file, "wb") as f:
                 f.write(response.content)
     except Exception as e:
-        # debug(message=f"Exception wile downloading Image || {e}", type="exception", separator="\n    [xx] ")
+        # debug(message=f"Exception wile downloading Image", type="exception", separator="\n    [xx] ")
         pass
 
 
@@ -299,7 +302,7 @@ def compare_avatar_old(searched_user_avatar: str, user_avatar:str ) -> float:
 
         return similarity
     except Exception as e:
-        debug(message=f"Got exception while comparing images. || {e}", type="exception", separator="\n    [xx] ")
+        # debug(message=f"Got exception while comparing images. || {e}", type="exception", separator="\n    [xx] ")
         return 0.0
 
 
@@ -341,6 +344,7 @@ def compare_avatar(searched_user_avatar: str, user_avatar:str ) -> float:
             i += 1
         c1 = c1**(1 / 2)
 
+
         return c1.tolist()[0]
     except Exception as e:
         debug(message=f"Got exception while comparing images. || {e}", type="exception", separator="\n    [xx] ")
@@ -359,7 +363,9 @@ def compare_string(str1: str, str2: str) -> float:
         float: score of the comparison
     """
     try:
-        ratio = fuzz.ratio(str1, str2)
+        if str1 and str2:
+            ratio = fuzz.ratio(str1, str2)
+        else: ratio = 0
     except Exception as e:
         debug(message=f"Got exception while comparing strings. || {e}", type="exception", separator="\n    [xx] ")
         ratio = 0
@@ -479,7 +485,7 @@ def read_json(file: str) -> dict:
             with open(file, 'r') as r:
                 return json.load(r)
         else:
-            debug(message=f" File not found: {file}", type="error", separator="\n [xx] ")
+            # debug(message=f" File not found: {file}", type="error", separator="\n [xx] ")
             return {}
     except Exception as e:
         debug(message=f"Exception while reading file: {file} || {e}", type="exception", separator="\n    [xx] ")
@@ -546,7 +552,8 @@ def download_avatar_thread(avatar_url: str, avatar_file: str):
             with open(avatar_file, "wb") as f:
                 f.write(response.content)
     except Exception as e:
-        debug(message=f"Exception wile downloading Image || {e}", type="exception", separator="\n    [xx] ")
+        # debug(message=f"Exception wile downloading Image || {e}", type="exception", separator="\n    [xx] ")
+        pass
 
 
 # >> function to calculate comparison score between each matching profiles and main profile. Function is intended to run in multiple threads.
@@ -565,10 +572,10 @@ def profile_comparison(main_profile: str) -> None:
 
 
 # >> function where all magic happens
-def main(input_file):
+def main():
 
     # ! READ INPUT FILE 
-    main_profiles = list(set(read_input(input_file)))
+    main_profiles = list(set(read_input(CONFIG["input_file"])))
     debug(message=f"Total number of main profiles = {len(main_profiles)}", type="info", separator=f"\n [+] ")
 
 
@@ -577,6 +584,10 @@ def main(input_file):
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONFIG["max_worker_count"]) as matching_profile_thread:
         matching_profile_thread.map(get_profile_data_thread, main_profiles)
     debug(message=f"Scraped all Matching Profiles for each Main Profile", type="info", separator=f"\n [+] ")
+
+    time_ended = datetime.datetime.now()
+    total_execution_time = time_ended - time_started
+    debug(message=f"Total Execution Time to get data from TikT  ok: {total_execution_time}", type="info", separator=f"\n [+] ")
 
 
     # ! LOOP THROUGH ALL PROFILES, READ MATCHING PROFILE JSON AND DOWNLOAD IMAGE 
@@ -591,7 +602,7 @@ def main(input_file):
             avatars += [ (data["avatar_url"], data["avatar_file"]) for data in main_profile_data["matching_profiles"] ]
 
     debug(message=f"Downloading Avatars", type="info", separator=f"\n [+] ")
-    with concurrent.futures.ThreadPoolExecutor() as download_thread:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CONFIG["max_worker_count"]) as download_thread:
         # download_thread.map(download_avatar_thread_2, *zip(*avatars))
         download_thread.map(download_avatar_thread, *zip(*avatars))
     debug(message=f"Done Downloading Avatars", type="info", separator=f"\n [+] ")
@@ -618,7 +629,9 @@ def main(input_file):
         # adding closest matching profile to desired profiles list
         closest_matching_profiles.append({
             "Real Account": f"https://www.tiktok.com/@{main_profile}",
+            "R Followers Count": main_profile_data["main_profile"]["follower_count"],
             "Fake Account Link": f"https://www.tiktok.com/@{closest_profile['username']}",
+            "F Followers Count": closest_profile["follower_count"],
             "Percentage": closest_profile["comparison_score"],
             "Status": True if closest_profile["comparison_score"] >= CONFIG['min_fake_score'] else False
         })
@@ -649,20 +662,9 @@ if __name__ == '__main__':
                 break
             print("Not a valid path.")
 
-        # get the input file from user
-        while True:
-            input_file = input("Please enter input file: ")
-            if os.path.exists(os.path.join(BASE_FOLDER, input_file)):
-                break
-            print("Not able to locate input file in project folder.")
-
         #  getting name of output file
-        while True:
-            OUTPUT_CSV_FILE = input("Please enter name of output file: ")
-            if OUTPUT_CSV_FILE.endswith(".csv"):
-                break
-            print("File name must end with .csv")
-
+        OUTPUT_CSV_FILE = input("Please enter name of output file: ").replace(".csv", "").strip()
+        OUTPUT_CSV_FILE += ".csv"
         OUTPUT_FOLDER = os.path.join(BASE_FOLDER, "DATA")
 
         # Local folder where the image will be saved
@@ -675,7 +677,7 @@ if __name__ == '__main__':
         CONFIG = read_config()
         if CONFIG:
             logger = set_logger()
-            main(input_file)
+            main()
         debug(message=f"Terminating Script **********\n", type="info", separator="\n  ********** ")
     except Exception as e:
         print(f"Exception in root: {e}")

@@ -3,8 +3,9 @@
     "output_file_name": "closest_profiles.csv",
     "debug": true,
     "save_json": false,
-    "max_worker_count": 4,
+    "max_worker_count": 6,
     "requests_timeout": 10,
+    "input_file": "sample.txt",
     "rapid_api": {
         "key": "Your_API_KEY",
         "host": "tiktok-video-no-watermark2.p.rapidapi.com",
